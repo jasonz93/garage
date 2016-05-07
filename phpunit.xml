@@ -1,0 +1,16 @@
+<phpunit bootstrap="vendor/autoload.php">
+    <testsuites>
+        <testsuite name="di">
+            <directory>tests/Garage/Framework/DI</directory>
+        </testsuite>
+        <testsuite name="configuration">
+            <directory>tests/Garage/Framework/Config</directory>
+        </testsuite>
+        <testsuite name="application">
+            <directory>tests/Garage/Framework/Application</directory>
+        </testsuite>
+        <testsuite name="http">
+            <directory>tests/Garage/Framework/Http</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

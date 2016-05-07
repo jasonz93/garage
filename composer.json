@@ -1,0 +1,21 @@
+{
+    "name": "garage/framework",
+    "description": "An Expiremental PHP Framework",
+    "authors": [
+        {
+            "name": "nicholas",
+            "email": "spirit.line.523@gmail.com"
+        }
+    ],
+    "require": {
+        "psr/http-message": "^1.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^5.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Garage\\Framework\\": "src/Garage/Framework/"
+        }
+    }
+}
