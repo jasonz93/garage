@@ -12,7 +12,7 @@ namespace Garage\Framework\Http;
 class UriTest extends \PHPUnit_Framework_TestCase
 {
     public function testParseUri() {
-        $uri = new Uri('http://zsh:pwd@www.baidu.com:82/hahaha/hehehe/hihihi?query=heihei#hash=hhh');
+        $uri = Uri::createFromString('http://zsh:pwd@www.baidu.com:82/hahaha/hehehe/hihihi?query=heihei#hash=hhh');
         $this->assertEquals('http', $uri->getScheme(), 'Scheme is not valid.');
         $this->assertEquals('www.baidu.com', $uri->getHost(), 'Host is not valid.');
         $this->assertEquals('/hahaha/hehehe/hihihi', $uri->getPath(), 'Path is not valid.');
@@ -38,8 +38,8 @@ class UriTest extends \PHPUnit_Framework_TestCase
     }
 
     public function testToString() {
-        $uri = new Uri('http://www.baidu.com');
-        $this->assertEquals('http://www.baidu.com', strval($uri));
+        $uri = Uri::createFromString('http://www.baidu.com');
+        $this->assertEquals('http://www.baidu.com/', strval($uri));
         $uri = new Uri();
         $uri = $uri->withPath('/testpath/hhh');
         $this->assertEquals('/testpath/hhh', strval($uri));

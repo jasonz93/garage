@@ -17,48 +17,83 @@ class Uri implements UriInterface
     private $host = '';
     private $path = '';
     private $port = null;
-    private $user_info = '';
+    private $user = '';
+    private $password = '';
     private $auth = '';
     private $query = '';
     private $fragment = '';
 
-    public function __construct($uri = null)
+    public function __construct($scheme = '', $host = '', $port = null, $path = '/', $query = '', $fragment = '', $user = '', $password = '')
     {
-        if ($uri != null && is_string($uri)) {
-            $this->fromString($uri);
-        }
+        $this->scheme = $this->filterScheme($scheme);
+        $this->host = $host;
+        $this->port = $this->filterPort($port);
+        $this->path = empty($path) ? '/' : $this->filterPath($path);
+        $this->query = $this->filterQuery($query);
+        $this->fragment = $this->filterQuery($fragment);
+        $this->user = $user;
+        $this->password = $password;
+        $this->updateAuth();
     }
 
-    public function fromString($uri) {
-        $index = 0;
-        $length = strlen($uri);
-        for (; $index < $length && $uri[$index] !== ':'; $this->scheme .= $uri[$index ++]);
-        $index += 3;
-        for (; $index < $length && $uri[$index] !== '/'; $this->host .= $uri[$index ++]);
-        for (; $index < $length; $this->path .= $uri[$index ++]);
-        if (($pos = strpos($this->host, '@')) !== false) {
-            $this->user_info = substr($this->host, 0, $pos);
-            $this->user_info = urldecode($this->user_info);
-            $this->host = substr($this->host, $pos + 1);
+    public static function createFromEnvironment(Environment $environment) {
+        $scheme = $environment['HTTPS'] == 'off' ? 'http' : 'https';
+        $host = $environment['HTTP_HOST'];
+        if (($pos = strpos($host, ':')) !== false) {
+            $host = substr($host, 0, $pos);
         }
-        if (($pos = strpos($this->host, ':')) !== false) {
-            $this->port = intval(substr($this->host, $pos + 1));
-            $this->host = substr($this->host, 0, $pos);
+        $port = $environment['SERVER_PORT'];
+        if (($scheme === 'http' && $port == 80) || ($scheme === 'https' && $port == 443)) {
+            $port = null;
         }
-        if ($this->user_info !== '') {
-            $this->auth .= $this->user_info.'@';
+        $path = $environment['REQUEST_URI'];
+        if (($pos = strpos($path, '?')) !== false) {
+            $path = substr($path, 0, $pos);
         }
-        $this->auth .= $this->host;
-        if ($this->port !== null) {
-            $this->auth .= ':'.$this->port;
+        $query = $environment['QUERY_STRING'];
+        return new self($scheme, $host, $port, $path, $query);
+    }
+
+    public static function createFromString($uri) {
+        if (!is_string($uri) && !method_exists($uri, '__toString')) {
+            throw new \InvalidArgumentException('Uri must be a string.');
         }
-        if (($pos = strpos($this->path, '?')) !== false) {
-            $this->query = substr($this->path, $pos + 1);
-            $this->path = substr($this->path, 0, $pos);
-        }
-        if (($pos = strpos($this->query, '#')) !== false) {
-            $this->fragment = substr($this->query, $pos + 1);
-            $this->query = substr($this->query, 0, $pos);
+
+        $parts = parse_url($uri);
+        $scheme = isset($parts['scheme']) ? $parts['scheme'] : '';
+        $user = isset($parts['user']) ? $parts['user'] : '';
+        $pass = isset($parts['pass']) ? $parts['pass'] : '';
+        $host = isset($parts['host']) ? $parts['host'] : '';
+        $port = isset($parts['port']) ? $parts['port'] : null;
+        $path = isset($parts['path']) ? $parts['path'] : '';
+        $query = isset($parts['query']) ? $parts['query'] : '';
+        $fragment = isset($parts['fragment']) ? $parts['fragment'] : '';
+
+        return new self($scheme, $host, $port, $path, $query, $fragment, $user, $pass);
+    }
+
+    private function filterScheme($scheme) {
+        return $scheme;
+    }
+
+    private function filterPort($port) {
+        return $port;
+    }
+
+    private function filterQuery($query) {
+        //TODO: deal with decoded query string
+        return $query;
+    }
+
+    private function filterPath($path) {
+        return $path;
+    }
+
+    private function updateAuth() {
+        $user_info = $this->getUserInfo();
+        $this->auth = ($user_info === '' ? '' : "$user_info@") . $this->getHost();
+        if ($this->getPort() !== null) {
+            $this->auth .= ':'.$this->getPort();
         }
     }
 
@@ -121,7 +156,7 @@ class Uri implements UriInterface
      */
     public function getUserInfo()
     {
-        return $this->user_info;
+        return $this->user . ($this->password === '' ? '' : ":$this->password");
     }
 
     /**
@@ -254,7 +289,7 @@ class Uri implements UriInterface
     public function withScheme($scheme)
     {
         $uri = clone $this;
-        $uri->scheme = $scheme;
+        $uri->scheme = $uri->filterScheme($scheme);
         return $uri;
     }
 
@@ -275,10 +310,9 @@ class Uri implements UriInterface
     public function withUserInfo($user, $password = null)
     {
         $uri = clone $this;
-        $uri->user_info = $user;
-        if ($password !== null) {
-            $uri->user_info .= ":$password";
-        }
+        $uri->user = $user;
+        $uri->password = $password === null ? '' : $password;
+        $uri->updateAuth();
         return $uri;
     }
 
@@ -298,6 +332,7 @@ class Uri implements UriInterface
     {
         $uri = clone $this;
         $uri->host = $host;
+        $uri->updateAuth();
         return $uri;
     }
 
@@ -321,7 +356,8 @@ class Uri implements UriInterface
     public function withPort($port)
     {
         $uri = clone $this;
-        $uri->port = intval($port);
+        $uri->port = $this->filterPort($port);
+        $uri->updateAuth();
         return $uri;
     }
 
@@ -350,7 +386,7 @@ class Uri implements UriInterface
     public function withPath($path)
     {
         $uri = clone $this;
-        $uri->path = $path;
+        $uri->path = $uri->filterPath($path);
         return $uri;
     }
 
@@ -372,8 +408,7 @@ class Uri implements UriInterface
     public function withQuery($query)
     {
         $uri = clone $this;
-        //TODO: deal with decoded query string
-        $uri->query = $query;
+        $uri->query = $uri->filterQuery($query);
         return $uri;
     }
 
@@ -394,8 +429,7 @@ class Uri implements UriInterface
     public function withFragment($fragment)
     {
         $uri = clone $this;
-        $uri->fragment = $fragment;
-        //TODO: deal with decoded fragment string
+        $uri->fragment = $uri->filterQuery($fragment);
         return $uri;
     }
 
@@ -432,11 +466,7 @@ class Uri implements UriInterface
             $str .= '//'.$this->getAuthority();
         }
         if (($path = $this->getPath()) !== '') {
-            if ($path[0] === '/') {
-                $str .= $path;
-            } else {
-                $str .= '/'.$path;
-            }
+            $str .= '/' . ltrim($path, '/');
         }
         if ($this->getQuery() !== '') {
             $str .= '?'.$this->getQuery();

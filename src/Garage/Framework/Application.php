@@ -6,10 +6,10 @@
  * Time: 下午5:45
  */
 
-namespace Garage\Framework\Application;
+namespace Garage\Framework;
 
 
-use Garage\Framework\Config\Configuration;
+use Garage\Framework\Configuration;
 
 class Application
 {

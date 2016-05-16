@@ -6,7 +6,7 @@
  * Time: 下午5:50
  */
 
-namespace Garage\Framework\Application;
+namespace Garage\Framework;
 
 
 class ApplicationTest extends \PHPUnit_Framework_TestCase

@@ -6,7 +6,7 @@
  * Time: 下午3:49
  */
 
-namespace Garage\Framework\Config;
+namespace Garage\Framework;
 
 
 class Configuration
